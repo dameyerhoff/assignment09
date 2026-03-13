@@ -1,26 +1,117 @@
+/* Imports the retro-style pixel font and Tailwind core */
+@import url("https://fonts.googleapis.com/css2?family=VT323&display=swap");
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@layer base {
+  html {
+    /* Prevents the layout from jumping when scrolling */
+    scrollbar-gutter: stable;
+  }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    /* Keeping Arial as fallback, but the VT323 is applied per-element */
+    font-family: Arial, Helvetica, sans-serif;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* Damage Shake: Mimics the classic screen-rattle when taking a hit */
+  @keyframes screen-shake {
+    0% {
+      transform: translate(1px, 1px) rotate(0deg);
+    }
+    10% {
+      transform: translate(-1px, -2px) rotate(-1deg);
+    }
+    20% {
+      transform: translate(-3px, 0px) rotate(1deg);
+    }
+    30% {
+      transform: translate(3px, 2px) rotate(0deg);
+    }
+    40% {
+      transform: translate(1px, -1px) rotate(1deg);
+    }
+    50% {
+      transform: translate(-1px, 2px) rotate(-1deg);
+    }
+    60% {
+      transform: translate(-3px, 1px) rotate(0deg);
+    }
+    70% {
+      transform: translate(3px, 1px) rotate(-1deg);
+    }
+    80% {
+      transform: translate(-1px, -1px) rotate(1deg);
+    }
+    90% {
+      transform: translate(1px, 2px) rotate(0deg);
+    }
+    100% {
+      transform: translate(1px, -2px) rotate(-1deg);
+    }
+  }
+
+  /* Zone Transition: A stepped pixel-style fade for tab switching */
+  @keyframes zone-enter {
+    from {
+      opacity: 0;
+      filter: brightness(2);
+      transform: scale(0.98);
+    }
+    to {
+      opacity: 1;
+      filter: brightness(1);
+      transform: scale(1);
+    }
+  }
+
+  /* Ring Collect Pop: A quick scaling effect for successful interactions */
+  @keyframes ring-pop {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.2);
+      filter: brightness(1.5);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  /* Utility class to trigger the rapid shake animation */
+  .animate-shake {
+    animation: screen-shake 0.15s infinite !important;
+  }
+
+  /* Utility class for a smooth ring-style feedback pulse */
+  .animate-ring-collect {
+    animation: ring-pop 0.3s ease-out;
+  }
+
+  /* Automatically triggers the Zone Transition on Radix UI Tab switches */
+  [data-state="active"] {
+    animation: zone-enter 0.2s steps(4) forwards;
+  }
+
+  /* Game Boy Scanline Effect: Adds vintage horizontal lines to any container */
+  .sonic-scanlines {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sonic-scanlines::after {
+    content: " ";
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      rgba(18, 16, 16, 0) 50%,
+      rgba(0, 0, 0, 0.1) 50%
+    );
+    background-size: 100% 4px;
+    z-index: 2;
+    pointer-events: none;
+  }
 }
