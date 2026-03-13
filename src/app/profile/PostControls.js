@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { deletePost, updatePost, addLike } from "../actions";
 
@@ -8,10 +8,15 @@ export default function PostControls({ post }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post?.content || "");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [mounted, setMounted] = useState(false); // Fix for Hydration
   const ringAudioRef = useRef(null);
 
+  // Set mounted to true once the component hits the browser
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const handleLike = async (postId) => {
-    // Play sound immediately for feedback
     if (!ringAudioRef.current) {
       ringAudioRef.current = new Audio("/ring.mp3");
     }
@@ -20,7 +25,6 @@ export default function PostControls({ post }) {
       .play()
       .catch((err) => console.log("Audio failed:", err));
 
-    // Call the server action (which handles the 1-like-per-user check)
     await addLike(postId);
   };
 
@@ -66,7 +70,10 @@ export default function PostControls({ post }) {
             </span>
             <div className="flex flex-col items-end gap-1">
               <span className="text-[10px] font-black text-[#0f380f]/40 italic uppercase">
-                {new Date(post.created_at).toLocaleDateString()}
+                {/* HYDRATION FIX: Only render the date after mounting. 
+                  This prevents the Server/Client date format mismatch.
+                */}
+                {mounted ? new Date(post.created_at).toLocaleDateString() : ""}
               </span>
               <button
                 onClick={() => handleLike(post.id)}

@@ -25,7 +25,10 @@ export default async function ProfilePage() {
   const [profileRes, postsRes] = await Promise.all([
     pool.query("SELECT * FROM profiles WHERE clerk_id = $1", [userId]),
     pool.query(
-      `SELECT posts.*, profiles.username, profiles.avatar_url 
+      `SELECT 
+        posts.*, 
+        profiles.username, 
+        profiles.avatar_url 
        FROM posts 
        INNER JOIN profiles ON posts.clerk_id = profiles.clerk_id
        WHERE posts.clerk_id = $1 
@@ -37,14 +40,11 @@ export default async function ProfilePage() {
   const profile = profileRes.rows?.[0] || {};
   const posts = postsRes.rows || [];
 
-  const ringCount =
-    (profile.ring_count || 0) +
-    posts.reduce((acc, post) => acc + (post.likes || 0), 0);
-
+  // Single Source of Truth from DB
+  const ringCount = profile.ring_count || 0;
   const isProfileComplete = !!profile.username?.trim();
 
-  // STABLE RESET KEY: If the data in the DB changes, the key changes.
-  // This forces the ProfileForm to unmount and remount with fresh state.
+  // Forces form reset on DB update
   const profileResetKey = `profile-${userId}-${profile.username || "empty"}-${profile.bio || "empty"}`;
 
   return (
@@ -138,11 +138,21 @@ export default async function ProfilePage() {
                             placeholder="TYPE A MESSAGE..."
                             className="w-full p-2 border-2 border-black/10 rounded bg-[#9bbc0f] text-xl text-[#0f380f] placeholder:text-[#0f380f]/50 mb-1 focus:outline-none resize-none grow"
                           />
-                          <span
-                            className={`${fieldTitleClass} text-center mt-auto`}
-                          >
-                            Press Post It
-                          </span>
+                          <div className="flex flex-col items-center mt-auto">
+                            <div className="flex items-center gap-1 opacity-80 mb-1">
+                              <img
+                                src="/sonic-ring.gif"
+                                className="w-3.5 h-3.5 object-contain"
+                                alt="ring"
+                              />
+                              <span className="text-[14px] font-bold text-[#0f380f] uppercase tracking-tighter">
+                                EARN 1 RING FOR EVERY POST MADE!
+                              </span>
+                            </div>
+                            <span className={`${fieldTitleClass} text-center`}>
+                              Press Post It
+                            </span>
+                          </div>
                         </form>
                       ) : (
                         <div className="h-full flex flex-col items-center justify-center text-[#0f380f] text-center">
