@@ -8,6 +8,7 @@ import StartButton from "../../components/StartButton";
 import { UserButton } from "@clerk/nextjs";
 import PostControls from "./PostControls";
 import RingCounter from "../../components/RingCounter";
+import ProfileForm from "../../components/ProfileForm";
 
 export const dynamic = "force-dynamic";
 
@@ -36,12 +37,15 @@ export default async function ProfilePage() {
   const profile = profileRes.rows?.[0] || {};
   const posts = postsRes.rows || [];
 
-  // Logic remains the same: 1 ring per post + 1 ring per like
-  const ringCount = posts.reduce(
-    (acc, post) => acc + (post.likes || 0),
-    posts.length,
-  );
+  const ringCount =
+    (profile.ring_count || 0) +
+    posts.reduce((acc, post) => acc + (post.likes || 0), 0);
+
   const isProfileComplete = !!profile.username?.trim();
+
+  // STABLE RESET KEY: If the data in the DB changes, the key changes.
+  // This forces the ProfileForm to unmount and remount with fresh state.
+  const profileResetKey = `profile-${userId}-${profile.username || "empty"}-${profile.bio || "empty"}`;
 
   return (
     <div
@@ -51,8 +55,22 @@ export default async function ProfilePage() {
           "linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url('/background.jpg')",
       }}
     >
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        @keyframes pixel-wipe {
+          0% { clip-path: inset(0 100% 0 0); transform: translateX(-10px); }
+          100% { clip-path: inset(0 0 0 0); transform: translateX(0); }
+        }
+        .animate-zone-transition {
+          animation: pixel-wipe 0.2s steps(4) forwards;
+        }
+      `,
+        }}
+      />
+
       <nav className="bg-[#0054B4] border-b-4 border-blue-900 p-3 shadow-lg sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-4 group shrink-0">
             <div className="relative w-11.5 h-11.5 -my-1">
               <Image
@@ -72,10 +90,11 @@ export default async function ProfilePage() {
             </div>
           </Link>
 
-          <div className="flex items-center gap-4">
-            {/* We only pass the data (number), not the function */}
+          <div className="flex items-center gap-6">
             <RingCounter ringCount={ringCount} />
-            <UserButton afterSignOutUrl="/" />
+            <div className="flex items-center shrink-0">
+              <UserButton afterSignOutUrl="/" />
+            </div>
           </div>
         </div>
       </nav>
@@ -83,7 +102,7 @@ export default async function ProfilePage() {
       <main className="max-w-6xl mx-auto px-6 pt-6 pb-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10">
         <div className="lg:col-span-4 lg:sticky lg:top-24 h-fit">
           <Tabs.Root defaultValue="new-post" suppressHydrationWarning>
-            <div className="relative rounded-[28px] border-4 border-black/10 shadow-2xl bg-[#C4C1C0] w-full h-103.75 flex flex-col">
+            <div className="relative rounded-[28px] border-4 border-black/10 shadow-2xl bg-[#C4C1C0] w-full h-103.75 flex flex-col overflow-hidden">
               <div className="absolute top-4 left-4 flex flex-col items-center gap-0.5 z-20">
                 <div className="w-1.5 h-1.5 rounded-full bg-red-600 shadow-[0_0_5px_red] animate-pulse" />
                 <span className="text-[6px] font-black text-red-800 uppercase tracking-tighter">
@@ -100,12 +119,12 @@ export default async function ProfilePage() {
                   </div>
 
                   <div
-                    className="relative p-3 rounded bg-[#8bac0f] shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)] h-43.75 overflow-y-auto scrollbar-hide font-['VT323',monospace]"
+                    className="relative p-3 rounded bg-[#8bac0f] border-2 border-black/40 ring-4 ring-inset ring-black/20 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)] h-43.75 overflow-y-auto scrollbar-hide font-['VT323',monospace]"
                     suppressHydrationWarning
                   >
                     <Tabs.Content
                       value="new-post"
-                      className="outline-none h-full"
+                      className="outline-none h-full data-[state=active]:animate-zone-transition"
                     >
                       {isProfileComplete ? (
                         <form
@@ -130,39 +149,30 @@ export default async function ProfilePage() {
                           <p className="text-xl font-bold uppercase mb-1 leading-none">
                             Access Denied
                           </p>
-                          <p className="text-sm uppercase leading-tight">
-                            Enter Profile Info to Post.
+                          <p className="text-[14px] uppercase leading-tight">
+                            to be able to Post
                           </p>
-                          <div className="mt-4 animate-bounce text-2xl">↓</div>
+                          <p className="text-[14px] uppercase leading-tight">
+                            create a profile by pressing B
+                          </p>
+                          <p className="text-[12px] mt-1 opacity-80 uppercase leading-tight">
+                            (and earn your 1st ring for doing so)
+                          </p>
+                          <div className="mt-4 animate-bounce text-2xl font-bold">
+                            ↓
+                          </div>
                         </div>
                       )}
                     </Tabs.Content>
 
-                    <Tabs.Content value="edit" className="outline-none h-full">
-                      <form
-                        action={saveProfile}
-                        id="profile-form"
-                        className="space-y-1"
-                      >
-                        <div>
-                          <label className={fieldTitleClass}>
-                            Display Name
-                          </label>
-                          <input
-                            name="username"
-                            defaultValue={profile?.username || ""}
-                            className="w-full p-1 px-2 border-2 border-black/10 rounded bg-[#9bbc0f] text-lg focus:outline-none text-[#0f380f]"
-                          />
-                        </div>
-                        <div>
-                          <label className={fieldTitleClass}>Bio</label>
-                          <textarea
-                            name="bio"
-                            defaultValue={profile?.bio || ""}
-                            className="w-full p-1 px-2 border-2 border-black/10 rounded h-14 bg-[#9bbc0f] text-lg focus:outline-none text-[#0f380f] resize-none"
-                          />
-                        </div>
-                      </form>
+                    <Tabs.Content
+                      value="edit"
+                      className="outline-none h-full data-[state=active]:animate-zone-transition"
+                    >
+                      <ProfileForm
+                        key={profileResetKey}
+                        initialData={profile}
+                      />
                     </Tabs.Content>
                   </div>
                 </div>
@@ -178,7 +188,7 @@ export default async function ProfilePage() {
                 <div className="absolute top-4 right-6 flex flex-col items-center">
                   <div className="flex gap-4 rotate-[-10deg] text-[7px] font-black text-black/30 italic uppercase mb-1">
                     <span className="w-10 text-center">PROFILE</span>
-                    <span className="w-10 text-center">POST</span>
+                    <span className="text-[7px] w-10 text-center">POST</span>
                   </div>
                   <Tabs.List className="flex gap-3 rotate-[-10deg]">
                     <Tabs.Trigger value="edit" className={tabBtnClass}>
@@ -228,6 +238,15 @@ export default async function ProfilePage() {
                       START
                     </div>
                   </div>
+                </div>
+
+                <div className="absolute bottom-2 right-2 flex gap-1.5 rotate-[-30deg] opacity-25 pointer-events-none">
+                  {[...Array(6)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-1 h-8 bg-black rounded-full shadow-[1px_1px_0_rgba(255,255,255,0.1)]"
+                    />
+                  ))}
                 </div>
               </div>
             </div>
